@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>小记录工具</title>
+    <style>
+        /* ----- 原始样式（完整保留，未改动任何功能逻辑）----- */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        .left-panel {
+            flex: 2;
+            min-width: 280px;
+            padding: 24px 20px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+        }
+        .right-panel {
+            flex: 1.2;
+            min-width: 260px;
+            background: #fefefe;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 四个按钮左右排列 */
+        .action-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            border-radius: 48px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-start {
+            background: #1e293b;
+            color: white;
+        }
+        .btn-up {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-up .icon {
+            font-size: 1.5rem;
+            font-weight: 900;
+            line-height: 1;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .btn-down {
+            background: #f44336;
+            color: white;
+        }
+        .btn-down .icon {
+            font-size: 1.5rem;
+            font-weight: 900;
+            line-height: 1;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .btn-pause {
+            background: #b45309;
+            color: white;
+        }
+        .btn-action:active {
+            transform: translateY(2px);
+        }
+        /* 实时记录区域 */
+        .live-log {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid #cbd5e1;
+            box-shadow: inset 0 1px 2px #00000008;
+        }
+        .live-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .segment-status {
+            font-size: 0.75rem;
+            background: #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 30px;
+            color: #1e293b;
+        }
+        /* 切换按钮样式 */
+        .toggle-layout-btn {
+            background: #64748b;
+            border: none;
+            color: white;
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-layout-btn:hover {
+            background: #475569;
+        }
+        /* 水平排列（默认） */
+        .log-list-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            font-family: monospace;
+        }
+        /* 垂直排列 */
+        .log-list-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            font-family: monospace;
+        }
+        .record-chip {
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            border-left: 4px solid;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: inline-block;
+        }
+        .record-item-vertical {
+            padding: 4px 8px;
+            border-bottom: 1px solid #eef2ff;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 12px;
+        }
+        .record-up {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .record-down {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        /* 右侧历史段样式 */
+        .saved-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .saved-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+        .export-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            border-radius: 30px;
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .segments-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .segment-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 12px 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            transition: 0.1s;
+            cursor: pointer;
+        }
+        .segment-card:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        .segment-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .segment-time {
+            font-size: 0.75rem;
+            color: #475569;
+            font-family: monospace;
+        }
+        .segment-stats {
+            display: flex;
+            gap: 16px;
+            font-weight: 600;
+        }
+        .stat-up { color: #2e7d32; background: #e8f5e9; padding: 2px 10px; border-radius: 20px; }
+        .stat-down { color: #c62828; background: #ffebee; padding: 2px 10px; border-radius: 20px; }
+        /* 详情视图 - 显示详细时序 */
+        .detail-view {
+            margin-top: 20px;
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 12px;
+            font-size: 0.75rem;
+            border: 1px solid #cbd5e1;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .detail-view h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.85rem;
+        }
+        .detail-log-entry {
+            font-family: monospace;
+            padding: 3px 0;
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        .info-note {
+            font-size: 0.7rem;
+            color: #475569;
+            text-align: center;
+            margin-top: 20px;
+        }
+        @media (max-width: 700px) {
+            .dashboard { flex-direction: column; }
+            .left-panel { border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .btn-action { white-space: normal; font-size: 0.8rem; padding: 10px 0; }
+            .btn-up .icon, .btn-down .icon { font-size: 1.8rem; }
+        }
+
+        /* ========== 新增移动端深度适配（不修改任何JS/HTML结构，只优化触屏体验） ========== */
+        /* 通用触摸优化 */
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+                background: #eef2f6;
+                align-items: flex-start;
+            }
+            .dashboard {
+                border-radius: 28px;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            }
+            .left-panel, .right-panel {
+                padding: 18px 16px;
+            }
+            /* 四个按钮重新布局：2x2 网格，完全适合拇指点击 */
+            .action-buttons {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+                margin-top: 24px;
+            }
+            .btn-action {
+                flex: unset;
+                padding: 14px 0;
+                font-size: 1rem;
+                white-space: nowrap;
+                border-radius: 60px;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            }
+            /* 让上下按钮内图标+文字更清晰 */
+            .btn-up .icon, .btn-down .icon {
+                font-size: 1.7rem;
+            }
+            .btn-start, .btn-pause {
+                font-size: 1rem;
+            }
+            /* 实时记录容器: 提高可读性与触摸空间 */
+            .live-log {
+                padding: 14px;
+                margin-bottom: 4px;
+            }
+            .live-title {
+                font-size: 0.95rem;
+                margin-bottom: 14px;
+            }
+            .segment-status {
+                font-size: 0.7rem;
+                padding: 4px 12px;
+            }
+            .toggle-layout-btn {
+                padding: 8px 12px;
+                font-size: 0.7rem;
+                border-radius: 40px;
+                background: #4b5563;
+            }
+            /* 记录区域最大高度增加，便于查看更多记录 */
+            .log-list-horizontal, .log-list-vertical {
+                max-height: 280px;
+                padding: 12px;
+                border-radius: 24px;
+            }
+            /* 水平记录标签更易读，去除白空间nowrap换行处理（避免小屏溢出） */
+            .record-chip {
+                white-space: normal;
+                word-break: keep-all;
+                font-size: 0.85rem;
+                padding: 6px 14px;
+                line-height: 1.3;
+            }
+            /* 垂直记录项增加内边距 方便触摸 */
+            .record-item-vertical {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+                gap: 16px;
+                border-radius: 12px;
+                background: #fef9e6;
+                margin-bottom: 2px;
+            }
+            /* 右侧历史分段卡片区优化 */
+            .saved-header h3 {
+                font-size: 1.2rem;
+            }
+            .export-btn {
+                padding: 8px 16px;
+                font-size: 0.8rem;
+                font-weight: 500;
+            }
+            .segments-list {
+                max-height: 45vh;
+                gap: 12px;
+            }
+            .segment-card {
+                padding: 14px 16px;
+                border-radius: 24px;
+            }
+            .segment-time {
+                font-size: 0.8rem;
+                font-weight: 500;
+            }
+            .segment-stats span {
+                font-size: 0.8rem;
+                padding: 4px 14px;
+            }
+            /* 详情区域点击反馈与字号 */
+            .detail-view {
+                max-height: 300px;
+                margin-top: 16px;
+                border-radius: 24px;
+                padding: 14px;
+                background: #ffffffea;
+            }
+            .detail-view h4 {
+                font-size: 0.9rem;
+            }
+            .detail-log-entry {
+                font-size: 0.8rem;
+                padding: 5px 0;
+            }
+            .info-note {
+                font-size: 0.65rem;
+                line-height: 1.4;
+                margin-top: 16px;
+                background: #f1f5f9c9;
+                padding: 8px;
+                border-radius: 20px;
+            }
+            /* 增加点击区域高亮反馈，提升触感 */
+            .btn-action, .segment-card, .toggle-layout-btn, .export-btn {
+                cursor: pointer;
+                -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+            }
+            .btn-action:active {
+                transform: scale(0.96);
+                transition: 0.05s;
+            }
+            .segment-card:active {
+                background: #e9eef3;
+                transform: scale(0.99);
+            }
+            /* 滚动条美化（可选） */
+            .segments-list::-webkit-scrollbar,
+            .log-list-horizontal::-webkit-scrollbar,
+            .log-list-vertical::-webkit-scrollbar,
+            .detail-view::-webkit-scrollbar {
+                width: 4px;
+                height: 4px;
+            }
+            .segments-list::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 20px;
+            }
+        }
+
+        /* 针对更小的折叠屏（宽度小于400px）微调 */
+        @media (max-width: 480px) {
+            .left-panel, .right-panel {
+                padding: 14px 12px;
+            }
+            .btn-action {
+                font-size: 0.85rem;
+                padding: 12px 0;
+            }
+            .btn-up .icon, .btn-down .icon {
+                font-size: 1.5rem;
+            }
+            .action-buttons {
+                gap: 10px;
+            }
+            .live-title {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .segment-status {
+                align-self: flex-start;
+            }
+            .record-chip {
+                font-size: 0.75rem;
+                padding: 4px 12px;
+            }
+            .segment-stats {
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .segment-card {
+                padding: 12px;
+            }
+        }
+
+        /* 横屏模式（手机横放时左右结构更舒适，保持左右格局但微调间距） */
+        @media (max-width: 900px) and (orientation: landscape) {
+            body {
+                padding: 8px;
+            }
+            .dashboard {
+                flex-direction: row;
+                max-height: 95vh;
+            }
+            .left-panel {
+                flex: 2;
+                overflow-y: auto;
+            }
+            .right-panel {
+                flex: 1.2;
+                overflow-y: auto;
+            }
+            .segments-list {
+                max-height: 45vh;
+            }
+            .log-list-horizontal, .log-list-vertical {
+                max-height: 160px;
+            }
+            .btn-action {
+                padding: 8px 0;
+            }
+            .action-buttons {
+                gap: 10px;
+            }
+        }
+
+        /* 额外增加触屏安全区域 (全面屏适配) */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+                padding-top: max(12px, env(safe-area-inset-top));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="left-panel">
+        <!-- 实时记录区域（上方） -->
+        <div class="live-log">
+            <div class="live-title">
+                <span>📋 当前段实时记录</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span class="segment-status" id="segmentStatus">⚪ 未开始</span>
+                    <button class="toggle-layout-btn" id="toggleLayoutBtn">🔄 切换垂直排列</button>
+                </div>
+            </div>
+            <div id="liveLogContainer" class="log-list-horizontal">
+                <span style="color:#94a3b8; padding:8px;">暂无记录，请先「开始新段」</span>
+            </div>
+        </div>
+
+        <!-- 四个按钮左右排列（下方） -->
+        <div class="action-buttons">
+            <button class="btn-action btn-start" id="btnStartSegment">➕ 开始新段</button>
+            <button class="btn-action btn-up" id="btnUp">
+                <span class="icon">🟢⬆️</span> 上
+            </button>
+            <button class="btn-action btn-down" id="btnDown">
+                <span class="icon">🔴⬇️</span> 下
+            </button>
+            <button class="btn-action btn-pause" id="btnPauseSegment">⏸️ 暂停并保存</button>
+        </div>
+
+        <div class="info-note">
+            💡 提示：点击上/下按钮记录方向，可切换水平/垂直排列显示。<br>
+            每个时段可随时暂停保存到右侧，点击右侧卡片可查看详细时序。
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="saved-header">
+            <h3>📁 历史分段</h3>
+            <button class="export-btn" id="exportAllBtn">📋 导出全部</button>
+        </div>
+        <div class="segments-list" id="segmentsList">
+            <div style="color:#94a3b8; text-align:center; padding:20px;">暂无保存的段<br>暂停后自动出现</div>
+        </div>
+        <div class="detail-view" id="detailView" style="display: none;">
+            <h4>🔍 分段详情（详细时序）</h4>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ----- 原始代码完整保留，未做任何改动 （包含全部业务逻辑）-----
+    let currentSegment = null;
+    let savedSegments = [];
+    let nextSegmentId = 1;
+    let isHorizontal = true;
+
+    const btnUp = document.getElementById('btnUp');
+    const btnDown = document.getElementById('btnDown');
+    const btnStartSegment = document.getElementById('btnStartSegment');
+    const btnPauseSegment = document.getElementById('btnPauseSegment');
+    const liveLogContainer = document.getElementById('liveLogContainer');
+    const segmentStatusSpan = document.getElementById('segmentStatus');
+    const segmentsListDiv = document.getElementById('segmentsList');
+    const exportAllBtn = document.getElementById('exportAllBtn');
+    const detailViewDiv = document.getElementById('detailView');
+    const detailContent = document.getElementById('detailContent');
+    const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
+
+    function formatTime(date) {
+        if (!date) return '--:--:--';
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function formatShortDateTime(date) {
+        if (!date) return '无效时间';
+        return `${date.getMonth()+1}/${date.getDate()} ${formatTime(date)}`;
+    }
+
+    function updateLiveLogUI() {
+        if (!currentSegment) {
+            liveLogContainer.innerHTML = '<span style="color:#94a3b8; padding:8px;">⛔ 当前无活动段，请点击「开始新段」</span>';
+            segmentStatusSpan.innerText = '⚪ 未开始';
+            segmentStatusSpan.style.background = '#e2e8f0';
+            return;
+        }
+        segmentStatusSpan.innerText = `🟢 活动中 (始于 ${formatTime(currentSegment.startTime)})`;
+        segmentStatusSpan.style.background = '#c8e6c9';
+        const records = currentSegment.records;
+        if (records.length === 0) {
+            liveLogContainer.innerHTML = '<span style="color:#94a3b8; padding:8px;">✨ 暂无记录，点击上/下箭头添加</span>';
+            return;
+        }
+
+        if (isHorizontal) {
+            let html = '';
+            records.forEach(rec => {
+                const timeStr = formatTime(rec.time);
+                const arrowSymbol = rec.direction === 'up' ? '🟢⬆️' : '🔴⬇️';
+                const chipClass = rec.direction === 'up' ? 'record-chip record-up' : 'record-chip record-down';
+                html += `<div class="${chipClass}">${timeStr} ${arrowSymbol}</div>`;
+            });
+            liveLogContainer.innerHTML = html;
+            liveLogContainer.className = 'log-list-horizontal';
+        } else {
+            let html = '';
+            records.forEach(rec => {
+                const timeStr = formatTime(rec.time);
+                const arrowSymbol = rec.direction === 'up' ? '🟢⬆️ 上' : '🔴⬇️ 下';
+                const itemClass = rec.direction === 'up' ? 'record-up' : 'record-down';
+                html += `<div class="record-item-vertical ${itemClass}">[${timeStr}] ${arrowSymbol}</div>`;
+            });
+            liveLogContainer.innerHTML = html;
+            liveLogContainer.className = 'log-list-vertical';
+        }
+    }
+
+    function toggleLayout() {
+        isHorizontal = !isHorizontal;
+        toggleLayoutBtn.textContent = isHorizontal ? '🔄 切换垂直排列' : '🔄 切换水平排列';
+        updateLiveLogUI();
+    }
+
+    function renderSavedSegments() {
+        if (savedSegments.length === 0) {
+            segmentsListDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">暂无保存的段<br>暂停后自动出现</div>';
+            return;
+        }
+        let segmentsHtml = '';
+        savedSegments.forEach(seg => {
+            const upCount = seg.records.filter(r => r.direction === 'up').length;
+            const downCount = seg.records.filter(r => r.direction === 'down').length;
+            const startStr = formatShortDateTime(seg.startTime);
+            const endStr = formatShortDateTime(seg.endTime);
+            segmentsHtml += `
+                <div class="segment-card" data-seg-id="${seg.id}">
+                    <div class="segment-summary">
+                        <div class="segment-time">📅 ${startStr} → ${endStr}</div>
+                        <div class="segment-stats">
+                            <span class="stat-up">🟢⬆️ 上 ${upCount}</span>
+                            <span class="stat-down">🔴⬇️ 下 ${downCount}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        segmentsListDiv.innerHTML = segmentsHtml;
+
+        document.querySelectorAll('.segment-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const segId = parseInt(card.getAttribute('data-seg-id'));
+                const segment = savedSegments.find(s => s.id === segId);
+                if (segment) showSegmentDetails(segment);
+            });
+        });
+    }
+
+    function showSegmentDetails(segment) {
+        const upCount = segment.records.filter(r => r.direction === 'up').length;
+        const downCount = segment.records.filter(r => r.direction === 'down').length;
+        const total = upCount + downCount;
+        const startStr = formatShortDateTime(segment.startTime);
+        const endStr = formatShortDateTime(segment.endTime);
+        let detailsHtml = `
+            <div style="margin-bottom: 8px;"><strong>时段：</strong>${startStr} → ${endStr}</div>
+            <div><strong>🟢⬆️ 向上：</strong> ${upCount} 次 &nbsp; <strong>🔴⬇️ 向下：</strong> ${downCount} 次 &nbsp; <strong>📊 总计：</strong> ${total} 次</div>
+            <hr style="margin: 8px 0;">
+            <div><strong>📋 详细时序：</strong></div>
+        `;
+        if (segment.records.length === 0) {
+            detailsHtml += '<div>无任何箭头记录。</div>';
+        } else {
+            segment.records.forEach(rec => {
+                const timeStr = formatTime(rec.time);
+                const dirStr = rec.direction === 'up' ? '🟢⬆️ 上' : '🔴⬇️ 下';
+                detailsHtml += `<div class="detail-log-entry">[${timeStr}] ${dirStr}</div>`;
+            });
+        }
+        detailContent.innerHTML = detailsHtml;
+        detailViewDiv.style.display = 'block';
+    }
+
+    function saveCurrentSegmentAndClear() {
+        if (!currentSegment) {
+            alert('没有正在进行的段，请先点击“开始新段”');
+            return false;
+        }
+        const endTime = new Date();
+        const savedSegment = {
+            id: nextSegmentId++,
+            startTime: currentSegment.startTime,
+            endTime: endTime,
+            records: [...currentSegment.records]
+        };
+        savedSegments.push(savedSegment);
+        renderSavedSegments();
+        currentSegment = null;
+        updateLiveLogUI();
+        return true;
+    }
+
+    function startNewSegment() {
+        if (currentSegment !== null) {
+            alert('当前有一个活动段尚未暂停！请先点击“暂停并保存”完成当前段，再开始新段。');
+            return false;
+        }
+        currentSegment = {
+            startTime: new Date(),
+            records: []
+        };
+        updateLiveLogUI();
+        return true;
+    }
+
+    function addRecord(direction) {
+        if (!currentSegment) {
+            alert('没有活动的时间段，请先点击“开始新段”');
+            return;
+        }
+        currentSegment.records.push({
+            time: new Date(),
+            direction: direction
+        });
+        updateLiveLogUI();
+    }
+
+    function exportAllSegments() {
+        if (savedSegments.length === 0) {
+            alert('暂无历史分段，无法导出');
+            return;
+        }
+        let exportText = '======== 上下记录分段报告 ========\n';
+        exportText += `生成时间: ${new Date().toLocaleString()}\n\n`;
+        savedSegments.forEach((seg, idx) => {
+            const upCnt = seg.records.filter(r => r.direction === 'up').length;
+            const downCnt = seg.records.filter(r => r.direction === 'down').length;
+            exportText += `【分段 ${idx+1}】 ${formatShortDateTime(seg.startTime)} → ${formatShortDateTime(seg.endTime)}\n`;
+            exportText += `向上: ${upCnt} 次, 向下: ${downCnt} 次, 总计: ${seg.records.length} 次\n`;
+            if (seg.records.length > 0) {
+                exportText += `记录详情:\n`;
+                seg.records.forEach(rec => {
+                    const dirStr = rec.direction === 'up' ? '🟢⬆️上' : '🔴⬇️下';
+                    exportText += `  ${formatTime(rec.time)} ${dirStr}\n`;
+                });
+            } else {
+                exportText += `  无任何箭头记录\n`;
+            }
+            exportText += `\n`;
+        });
+        navigator.clipboard.writeText(exportText).then(() => {
+            alert('✅ 全部历史分段已复制到剪贴板，可粘贴到任何文本中查看');
+        }).catch(() => {
+            const win = window.open();
+            win.document.write(`<pre>${exportText}</pre>`);
+        });
+    }
+
+    btnUp.addEventListener('click', () => addRecord('up'));
+    btnDown.addEventListener('click', () => addRecord('down'));
+    btnStartSegment.addEventListener('click', startNewSegment);
+    btnPauseSegment.addEventListener('click', () => {
+        if (currentSegment) saveCurrentSegmentAndClear();
+        else alert('没有进行中的段，无法暂停。请先“开始新段”');
+    });
+    exportAllBtn.addEventListener('click', exportAllSegments);
+    toggleLayoutBtn.addEventListener('click', toggleLayout);
+
+    window.addEventListener('load', () => {
+        startNewSegment();
+    });
+</script>
+</body>
+</html>
